@@ -1,0 +1,52 @@
+from flask import Flask, request, render_template
+import sqlite3
+import hashlib
+
+app = Flask(__name__)
+
+# Database connection (replace with your actual DB)
+def get_db_connection():
+    conn = sqlite3.connect('users.db')
+    return conn
+
+# Simple registration and login (DO NOT use in production!)
+@app.route('/register', methods=['POST'])
+def register():
+    username = request.form['username']
+    password = request.form['password']
+    # Hashing (very basic)
+    hashed_password = hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, hashed_password))
+    conn.commit()
+    conn.close()
+    return 'Registered!'
+
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form['username']
+    password = request.form['password']
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password FROM users WHERE username = ?", (username,))
+    stored_password = cursor.fetchone()
+    conn.close()
+
+    if stored_password:
+        hashed_password = stored_password[0]
+        if hashlib.sha256(password.encode('utf-8')).hexdigest() == hashed_password:
+            return 'Logged in!'
+        else:
+            return 'Invalid credentials!'
+    else:
+        return 'Invalid credentials!'
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)
